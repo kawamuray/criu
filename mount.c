@@ -1955,20 +1955,19 @@ int prepare_mnt_ns(void)
 			pr_err("Unable to find mount point for %s\n", opts.root);
 			return -1;
 		}
-		if (mi->parent == NULL) {
-			pr_err("New root and old root are the same\n");
-			return -1;
-		}
+		if (mi->parent != NULL) {
+			/* Our root is mounted over the parent (in the same directory) */
+			if (!strcmp(mi->parent->mountpoint, mi->mountpoint)) {
+				pr_err("The parent of the new root is unreachable\n");
+				return -1;
+			}
 
-		/* Our root is mounted over the parent (in the same directory) */
-		if (!strcmp(mi->parent->mountpoint, mi->mountpoint)) {
-			pr_err("The parent of the new root is unreachable\n");
-			return -1;
-		}
-
-		if (mount("none", mi->parent->mountpoint + 1, "none", MS_SLAVE, NULL)) {
-			pr_perror("Can't remount the parent of the new root with MS_SLAVE");
-			return -1;
+			if (mount("none", mi->parent->mountpoint + 1, "none", MS_SLAVE, NULL)) {
+				pr_perror("Can't remount the parent of the new root with MS_SLAVE");
+				return -1;
+			}
+		} else {
+			/* The mount point already prepared, do nothing */
 		}
 	}
 
